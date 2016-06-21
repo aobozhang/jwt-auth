@@ -25,16 +25,18 @@ class GetUserFromToken extends BaseMiddleware
      */
     public function handle($request, \Closure $next)
     {
-        if (! $token = $this->auth->setRequest($request)->getToken()) {
-            return $this->respond('tymon.jwt.absent', 'token_not_provided', 400);
+        try {
+            $token = $this->auth->setRequest($request)->getToken()
+        } catch (JWTException $e) {
+            return $this->respond('tymon.jwt.absent', $e->getMessage(), 400, [$e]);
         }
 
         try {
             $user = $this->auth->authenticate($token);
         } catch (TokenExpiredException $e) {
-            return $this->respond('tymon.jwt.expired', 'token_expired', $e->getStatusCode(), [$e]);
+            return $this->respond('tymon.jwt.expired', $e->getMessage(), $e->getStatusCode(), [$e]);
         } catch (JWTException $e) {
-            return $this->respond('tymon.jwt.invalid', 'token_invalid', $e->getStatusCode(), [$e]);
+            return $this->respond('tymon.jwt.invalid', $e->getMessage(), $e->getStatusCode(), [$e]);
         }
 
         if (! $user) {
